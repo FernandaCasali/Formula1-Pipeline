@@ -1,0 +1,60 @@
+# ===== Ambiente virtual =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ===== Cache do FastF1 =====
+# O FastF1 baixa MUITOS dados (telemetria, sessões). Nunca subir.
+cache/
+fastf1_cache/
+f1_cache/
+*.ff1pkl
+
+# ===== Variáveis de ambiente / segredos =====
+.env
+.env.local
+*.key
+
+# ===== Dados =====
+# Dados brutos/processados não vão pro Git (recriáveis pelo pipeline).
+# Se quiser versionar um dataset pequeno de exemplo, comente a linha dele.
+data/raw/
+data/processed/
+*.csv
+*.parquet
+*.pkl
+*.joblib
+
+# ===== Modelos treinados =====
+models/
+*.xgb
+*.model
+
+# ===== Notebooks =====
+.ipynb_checkpoints/
+
+# ===== VS Code =====
+.vscode/
+
+# ===== Streamlit =====
+.streamlit/secrets.toml
+
+# ===== Sistema operacional =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Logs =====
+*.log
