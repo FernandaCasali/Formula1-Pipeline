@@ -214,7 +214,7 @@ def html_podio(top3) -> str:
           background:conic-gradient(#fff 0 25%, #0A0A0B 0 50%, #fff 0 75%, #0A0A0B 0 100%);
           background-size:18px 6px; opacity:.18;"></div>
       <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px; align-items:end;
-          max-width:840px; margin:0 auto;">
+          max-width:none; margin:0 auto;">
         {d2}{d1}{d3}
       </div>
     </section>"""
@@ -253,12 +253,12 @@ def html_grid_prob(resultado) -> str:
         </div>"""
 
     return f"""
-    <section class="f1-card" style="padding:22px 24px;">
+    <section class="f1-card" style="padding:22px 24px; margin-top:34px;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
         <h2 class="f1-oswald" style="font-weight:600; font-size:17px; letter-spacing:1px; text-transform:uppercase; margin:0;">Grid de probabilidade</h2>
         <span class="f1-mono" style="font-size:10px; color:#6c6c74;">PREVISTO ✓ · REAL</span>
       </div>
-      <div style="display:flex; flex-direction:column; gap:7px;">{linhas}</div>
+      <div style="display:flex; flex-direction:column; gap:5px;">{linhas}</div>
     </section>"""
 
 
@@ -271,11 +271,11 @@ def html_importancia(features, acertos, nomes_previstos) -> str:
             largura = v / maximo * 100
             barras += f"""
             <div>
-              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px;">
                 <span style="font-size:13px; font-weight:600;">{label}</span>
                 <span class="f1-mono" style="font-size:12px; color:{LIMAO}; font-weight:700;">{v*100:.0f}%</span>
               </div>
-              <div style="height:8px; border-radius:5px; background:#1c1c20; overflow:hidden;">
+              <div style="height:5px; border-radius:5px; background:#1c1c20; overflow:hidden;">
                 <div style="height:100%; width:{largura:.0f}%; border-radius:5px; background:linear-gradient(90deg,#7a9e00,{LIMAO});"></div>
               </div>
             </div>"""
@@ -283,21 +283,24 @@ def html_importancia(features, acertos, nomes_previstos) -> str:
         barras = '<div style="color:#8A8A92; font-size:12px;">Modelo não carregado.</div>'
 
     ordem = " → ".join(nomes_previstos)
+    # Ordem: 'Previsto × Real' EM CIMA, 'Por que essa previsão?' embaixo.
+    # Fontes em tamanho normal; só os ESPAÇOS (padding/margin/gap/line-height)
+    # foram apertados p/ o rodapé alinhar com a base do pódio.
     return f"""
-    <div style="display:flex; flex-direction:column; gap:20px;">
-      <section class="f1-card" style="padding:22px 24px;">
-        <h2 class="f1-oswald" style="font-weight:600; font-size:17px; letter-spacing:1px; text-transform:uppercase; margin:0 0 4px;">Por que essa previsão?</h2>
-        <p style="font-size:12px; color:#8A8A92; margin:0 0 18px; line-height:1.5;">O que mais pesou na decisão do modelo (importância aprendida pelo XGBoost).</p>
-        <div style="display:flex; flex-direction:column; gap:14px;">{barras}</div>
-      </section>
-      <section style="background:linear-gradient(180deg,rgba(198,255,0,.06),#121214); border:1px solid #2c3a14; border-radius:16px; padding:20px 24px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-          <span style="width:8px; height:8px; border-radius:50%; background:{LIMAO}; box-shadow:0 0 10px {LIMAO};"></span>
-          <h2 class="f1-oswald" style="font-weight:600; font-size:16px; letter-spacing:1px; text-transform:uppercase; margin:0;">Previsto × Real</h2>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:30px;">
+      <section style="background:linear-gradient(180deg,rgba(198,255,0,.06),#121214); border:1px solid #2c3a14; border-radius:16px; padding:10px 20px;">
+        <div style="display:flex; align-items:center; gap:9px; margin-bottom:4px;">
+          <span style="width:7px; height:7px; border-radius:50%; background:{LIMAO}; box-shadow:0 0 10px {LIMAO};"></span>
+          <h3 class="f1-oswald" style="font-weight:600; font-size:16px; letter-spacing:1px; text-transform:uppercase; margin:0;">Previsto × Real</h3>
         </div>
-        <p style="font-size:13px; color:#cfd8c0; margin:8px 0 0; line-height:1.6;">
+        <p style="font-size:13px; color:#cfd8c0; margin:0; line-height:1.35;">
           <strong style="color:{LIMAO};">{acertos} de 3</strong> pilotos do pódio previsto subiram de verdade.
           Ordem prevista: <strong style="color:#fff;">{ordem}</strong>.</p>
+      </section>
+      <section class="f1-card" style="padding:10px 20px;">
+        <h3 class="f1-oswald" style="font-weight:600; font-size:16px; letter-spacing:1px; text-transform:uppercase; margin:0 0 2px;">Por que essa previsão?</h3>
+        <p style="font-size:13px; color:#8A8A92; margin:0 0 10px; line-height:1.35;">O que mais pesou na decisão do modelo (importância aprendida pelo XGBoost).</p>
+        <div style="display:flex; flex-direction:column; gap:7px;">{barras}</div>
       </section>
     </div>"""
 
@@ -375,28 +378,36 @@ def render(markup: str) -> None:
 st.set_page_config(page_title="F1 Podium Predictor", page_icon="🏁", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
 
-# --- Cabeçalho custom (logo + título) ---
-render(
-    f"""
-    <div style="display:flex; align-items:center; gap:16px; padding-bottom:6px;">
-      <div class="f1-flag"></div>
-      <div>
-        <div class="f1-oswald" style="font-weight:700; font-size:26px; letter-spacing:1px; line-height:1; text-transform:uppercase;">
-          F1 Podium <span style="color:{VERMELHO};">Predictor</span></div>
-        <div class="f1-mono" style="font-size:11px; color:#8A8A92; letter-spacing:.5px; margin-top:5px;">
-          XGBoost · validação temporal · sem data leakage</div>
-      </div>
-    </div>
-    """
-)
-
-# --- Controles (selectboxes nativos, lado a lado) ---
+# --- Cabeçalho + filtros na MESMA linha: título à esquerda, dropdowns à direita ---
 catalogo = carregar_catalogo()
-c1, c2, _ = st.columns([1, 2, 3])
-with c1:
+# Colunas: título largo + 2 filtros estreitos encostados na direita
+h_titulo, h_ano, h_gp = st.columns([2.6, 0.8, 1.2], gap="small")
+
+with h_titulo:
+    # Logo + título (mesmo HTML de antes, agora dentro da 1ª coluna)
+    render(
+        f"""
+        <div style="display:flex; align-items:center; gap:16px; padding-bottom:6px;">
+          <div class="f1-flag"></div>
+          <div>
+            <div class="f1-oswald" style="font-weight:700; font-size:26px; letter-spacing:1px; line-height:1; text-transform:uppercase;">
+              F1 Podium <span style="color:{VERMELHO};">Predictor</span></div>
+            <div class="f1-mono" style="font-size:11px; color:#8A8A92; letter-spacing:.5px; margin-top:5px;">
+              XGBoost · validação temporal · sem data leakage</div>
+          </div>
+        </div>
+        """
+    )
+
+with h_ano:
+    # Filtro de temporada (canto superior direito)
     ano = st.selectbox("Temporada", ANOS, index=len(ANOS) - 1)
+
+# Corridas só do ano escolhido, p/ alimentar o 2º dropdown
 corridas_do_ano = catalogo[catalogo["year"] == ano]
-with c2:
+
+with h_gp:
+    # Filtro de Grande Prêmio (ao lado do de temporada)
     rodada = st.selectbox(
         "Grande Prêmio",
         options=corridas_do_ano["round"].tolist(),
@@ -419,16 +430,18 @@ confianca = "Alta" if gap >= 0.10 else ("Média" if gap >= 0.05 else "Baixa")
 nomes_previstos = [nome_curto(n) for n in top3["driver_name"].tolist()]
 features = importancia_features()
 
-# --- Render do mockup (Opção A) ---
+# --- Faixa do GP + medidores (full width no topo) ---
 render(html_strip_e_medidores(nome_corrida, ano, rodada, acertos, confianca))
-render(html_podio(top3))
 
-# Grade inferior: grid de probabilidade (esq) + por que / previsto×real (dir)
-col_esq, col_dir = st.columns([1, 0.55], gap="medium")
-with col_esq:
-    render(html_grid_prob(resultado))
-with col_dir:
+# --- Pódio (esq) ao lado dos painéis 'por que' / 'previsto×real' (dir) ---
+col_podio, col_lado = st.columns([1, 0.42], gap="small")
+with col_podio:
+    render(html_podio(top3))
+with col_lado:
     render(html_importancia(features, acertos, nomes_previstos))
+
+# --- Grid de probabilidade sozinho embaixo (margem aplicada no próprio section) ---
+render(html_grid_prob(resultado))
 
 render(
     '<div style="text-align:center; margin-top:26px;" class="f1-mono">'
