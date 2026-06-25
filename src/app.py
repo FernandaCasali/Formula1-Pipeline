@@ -16,10 +16,12 @@ import streamlit as st
 
 from features import construir_features        # p/ montar o catálogo de corridas
 from predict import prever_corrida, carregar_modelo  # motor de previsão + modelo salvo
+from store import listar_temporadas            # temporadas disponíveis no disco
 from train import COLUNAS_FEATURE              # mesma lista de features do treino
 
 # Anos disponíveis no dataset — o mesmo contexto usado no treino/previsão.
-ANOS = [2021, 2022, 2023, 2024]
+# Descobertos do disco p/ não chumbar a lista (entra ano novo sozinho).
+ANOS = listar_temporadas()
 
 # ---------------------------------------------------------------------------
 # Paleta F1 (constantes de tema, não dados)

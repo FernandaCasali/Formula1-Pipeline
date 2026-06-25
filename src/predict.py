@@ -15,6 +15,7 @@ import joblib
 import pandas as pd
 
 from features import construir_features  # mesma pipeline de features do treino
+from store import listar_temporadas      # temporadas disponíveis no disco
 from train import COLUNAS_FEATURE        # reusa a MESMA lista de features do treino
 
 # Caminho do modelo treinado salvo pelo train.py.
@@ -47,15 +48,17 @@ def prever_corrida(year: int, round_number: int, anos_contexto=None) -> pd.DataF
         year: ano da corrida a prever (ex: 2024).
         round_number: rodada no calendário (ex: 22).
         anos_contexto: anos usados para reconstruir o histórico das features.
-            Precisa incluir o ano-alvo e os anteriores. Padrão: 2021-2024.
+            Precisa incluir o ano-alvo e os anteriores. Padrão: todas as
+            temporadas salvas no disco.
 
     Returns:
         DataFrame com os pilotos ordenados por probabilidade de pódio (maior
         primeiro), já marcando o top 3 previsto e o resultado real p/ conferência.
     """
-    # Por padrão usamos as 4 temporadas — o histórico que alimenta as features.
+    # Por padrão usamos todas as temporadas no disco — o histórico que
+    # alimenta as features (descoberto dinamicamente, sem chumbar anos).
     if anos_contexto is None:
-        anos_contexto = [2021, 2022, 2023, 2024]
+        anos_contexto = listar_temporadas()
 
     # Carrega o modelo treinado
     modelo = carregar_modelo()

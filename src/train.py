@@ -8,7 +8,8 @@ Princípios (do CLAUDE.md):
 
 Duas avaliações:
   1) TimeSeriesSplit  -> validação cruzada temporal (intervalo de desempenho).
-  2) Holdout final    -> treina 2021-2023, testa 2024 (cenário real).
+  2) Holdout final    -> treina nas temporadas passadas, testa na mais
+                          recente do dataset (cenário real).
 """
 
 from pathlib import Path
@@ -23,6 +24,7 @@ from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
 from features import construir_features  # monta target + features sem leakage
+from store import listar_temporadas      # descobre as temporadas salvas no disco
 
 # As colunas que o modelo usa como entrada. NÃO inclui 'position'/'points'/
 # 'status' da corrida atual — isso é resultado, viraria leakage.
@@ -32,6 +34,8 @@ COLUNAS_FEATURE = [
     "driver_form_points",  # média de pontos do piloto nas últimas corridas
     "constructor_form",    # média de pontos da equipe nas últimas corridas
     "circuit_best_pos",    # melhor posição do piloto naquele circuito no passado
+    "driver_season_points",       # pontos do piloto no campeonato até a corrida
+    "constructor_season_points",  # pontos da equipe no campeonato até a corrida
 ]
 
 # Coluna alvo: 1 = subiu no pódio, 0 = não.
@@ -144,9 +148,62 @@ def avaliar_temporal(df: pd.DataFrame) -> None:
         )
 
 
+def avaliar_acertos_podio(modelo: Pipeline, teste: pd.DataFrame) -> None:
+    """
+    Métrica HONESTA do produto: acertos médios no pódio previsto por corrida.
+
+    O classification_report usa corte de 0.5 por piloto — mas não é assim que o
+    pódio é escolhido. Na vida real, ranqueamos os pilotos e cortamos no TOP 3
+    (o pódio tem exatamente 3 lugares). Esta função reproduz essa regra corrida
+    a corrida e mede quantos dos 3 previstos realmente subiram.
+
+    É a linha de base contra a qual vamos comparar mudanças futuras no modelo:
+    se uma feature nova não mexe NESTE número, ela não ajudou o produto.
+
+    Args:
+        modelo: pipeline já treinado.
+        teste: DataFrame do ano de teste, com 'year', 'round', 'podium' e as
+            COLUNAS_FEATURE (precisa das colunas de contexto, não só as features).
+    """
+    # Trabalhamos numa cópia p/ não sujar o DataFrame original do chamador.
+    teste = teste.copy()
+
+    # Probabilidade de pódio de cada piloto (coluna 1 = classe positiva).
+    teste["prob_podium"] = modelo.predict_proba(teste[COLUNAS_FEATURE])[:, 1]
+
+    acertos_por_corrida = []  # guarda quantos acertos (0..3) cada corrida teve
+
+    # Cada 'round' é uma corrida independente; agrupamos p/ ranquear dentro dela.
+    for _, corrida in teste.groupby("round"):
+        # Top 3 pilotos mais prováveis = o pódio que o modelo "apostaria".
+        top3 = corrida.nlargest(3, "prob_podium")
+
+        # Dos 3 previstos, quantos realmente subiram (podium == 1).
+        acertos = int(top3["podium"].sum())
+        acertos_por_corrida.append(acertos)
+
+    n_corridas = len(acertos_por_corrida)          # total de corridas avaliadas
+    total_acertos = sum(acertos_por_corrida)       # acertos somados na temporada
+    media = total_acertos / n_corridas             # acertos médios por corrida (0..3)
+
+    # Acerto percentual: do total de 3 vagas por corrida, quantas pegamos.
+    pct = total_acertos / (3 * n_corridas)
+
+    print("\n=== Acertos no pódio previsto (TOP 3 por corrida) ===")
+    print(f"Corridas avaliadas: {n_corridas}")
+    print(f"Acerto médio: {media:.2f}/3 por corrida  ({pct:.0%} das vagas de pódio)")
+    # Distribuição: em quantas corridas acertamos 3, 2, 1, 0 — mostra a consistência.
+    for k in (3, 2, 1, 0):
+        qtd = acertos_por_corrida.count(k)
+        print(f"  {k}/3 em {qtd:2d} corridas")
+
+
 def treinar_final(df: pd.DataFrame) -> Pipeline:
     """
-    Treino final no cenário real: treina 2021-2023, testa 2024.
+    Treino final no cenário real: treina nos anos passados, testa no mais recente.
+
+    O ano de teste é descoberto do próprio dataset (o maior ano presente), não
+    chumbado — assim o holdout acompanha sozinho a chegada de temporadas novas.
 
     Args:
         df: DataFrame já com features e alvo.
@@ -154,10 +211,13 @@ def treinar_final(df: pd.DataFrame) -> Pipeline:
     Returns:
         O modelo treinado (pipeline), pronto para ser salvo/usado.
     """
-    # Máscara temporal: treino = anos passados, teste = ano mais recente.
+    # Ano de teste = a temporada mais recente do dataset (a "atual").
+    ano_teste = int(df["year"].max())
+
+    # Máscara temporal: treino = todos os anos anteriores, teste = o ano atual.
     # Split por ANO (não aleatório) — é o coração da validação temporal.
-    treino = df[df["year"] < 2024]   # 2021, 2022, 2023
-    teste = df[df["year"] == 2024]   # 2024 (a "temporada atual" deste dataset)
+    treino = df[df["year"] < ano_teste]   # todas as temporadas anteriores
+    teste = df[df["year"] == ano_teste]   # a "temporada atual" deste dataset
 
     # Separa features (X) e alvo (y) de cada conjunto
     X_treino, y_treino = treino[COLUNAS_FEATURE], treino[COLUNA_ALVO]
@@ -173,7 +233,7 @@ def treinar_final(df: pd.DataFrame) -> Pipeline:
     # Avalia em 2024 — dados que o modelo NUNCA viu no treino
     y_prev = modelo.predict(X_teste)
 
-    print("\n=== Holdout final: treino 2021-2023, teste 2024 ===")
+    print(f"\n=== Holdout final: treino < {ano_teste}, teste {ano_teste} ===")
     print(f"Linhas de treino: {len(X_treino)} | teste: {len(X_teste)}")
     # Relatório completo: precision/recall/f1 das duas classes
     print(classification_report(y_teste, y_prev, zero_division=0))
@@ -189,13 +249,17 @@ def treinar_final(df: pd.DataFrame) -> Pipeline:
     for nome, imp in pares:
         print(f"  {nome:20s} {imp:.3f}")
 
+    # Métrica honesta do produto: ranqueia e corta no top 3 corrida a corrida.
+    # 'teste' ainda tem year/round/podium (foi fatiado antes de separar X/y).
+    avaliar_acertos_podio(modelo, teste)
+
     return modelo
 
 
 # Roda o treino completo: python src/train.py
 if __name__ == "__main__":
-    # 1) Constrói as features das 4 temporadas
-    df = construir_features([2021, 2022, 2023, 2024])
+    # 1) Constrói as features de TODAS as temporadas salvas no disco
+    df = construir_features(listar_temporadas())
 
     # 2) Validação cruzada temporal — intervalo honesto de desempenho
     avaliar_temporal(df)
