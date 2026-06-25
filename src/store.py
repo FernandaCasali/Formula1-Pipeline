@@ -46,6 +46,33 @@ def save_season(df: pd.DataFrame, year: int) -> Path:
     return path
 
 
+def listar_temporadas() -> list[int]:
+    """
+    Descobre quais temporadas estão salvas em data/raw/, lendo o disco.
+
+    Fonte única de verdade dos anos disponíveis: em vez de chumbar uma lista
+    de anos em cada módulo (features, train, predict, app), todos perguntam
+    aqui. Assim, coletar um ano novo (ex: 2025) já entra no pipeline sozinho,
+    sem editar código — coerente com a filosofia de pipeline reprodutível.
+
+    Returns:
+        Lista de anos em ordem crescente (ex: [2017, 2018, ..., 2024]).
+    """
+    # Varre os arquivos season_*.parquet e extrai o ano do nome do arquivo.
+    # path.stem -> "season_2024"; split("_")[1] -> "2024" -> int.
+    anos = [int(path.stem.split("_")[1]) for path in RAW_DIR.glob("season_*.parquet")]
+
+    # Falha explícita: sem nenhuma temporada no disco não há o que processar.
+    if not anos:
+        raise FileNotFoundError(
+            f"Nenhuma temporada em {RAW_DIR}. Rode a coleta primeiro: "
+            "python src/collect_seasons.py"
+        )
+
+    # Ordena crescente — a ordem cronológica importa p/ a validação temporal.
+    return sorted(anos)
+
+
 def load_season(year: int) -> pd.DataFrame:
     """
     Lê os resultados de uma temporada salva em disco.

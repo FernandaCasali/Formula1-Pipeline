@@ -12,7 +12,7 @@ from store import save_season           # grava o DataFrame em data/raw/
 # Anos que queremos no dataset. range(2021, 2025) gera 2021, 2022, 2023, 2024
 # (o limite de cima é exclusivo). 4 temporadas dão base p/ validação temporal:
 # treinar nas antigas, testar na mais recente.
-ANOS = range(2021, 2025)
+ANOS = range(2017, 2021)
 
 
 def coletar_temporadas(anos) -> None:

@@ -12,7 +12,7 @@ feature pode enxergar o resultado da corrida que estamos tentando prever.
 
 import pandas as pd
 
-from store import load_season  # lê cada temporada salva em data/raw/
+from store import load_season, listar_temporadas  # lê temporadas salvas em data/raw/
 
 # Quantas corridas anteriores entram no cálculo de "forma recente" do piloto.
 # 3 é um meio-termo: curto o bastante p/ refletir o momento atual, longo o
@@ -154,6 +154,62 @@ def adicionar_historico_circuito(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def adicionar_standings_temporada(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Força estrutural na temporada: pontos acumulados do piloto e da equipe
+    ANTES da corrida atual (proxy direto da posição no campeonato).
+
+    Diferente da forma móvel de 3 corridas (que capta o "momento"), os pontos
+    de campeonato medem a força consolidada da dupla piloto-carro no ano — é o
+    que separa um candidato a pódio recorrente de um azarão pontual.
+
+    Crucial: o campeonato ZERA a cada temporada, então agrupamos por (year, ...)
+    para o acumulado não vazar de um ano para o outro.
+
+    Args:
+        df: DataFrame já ordenado no tempo, com 'points' e 'constructor'.
+
+    Returns:
+        DataFrame com 'driver_season_points' e 'constructor_season_points'.
+    """
+    # --- Piloto ---
+    # Soma corrida a corrida os pontos do piloto DENTRO da temporada.
+    # shift(1) -> exclui a corrida atual (não conhecemos o resultado dela ainda);
+    # cumsum() pula o NaN inicial e segue acumulando -> pontos até a véspera.
+    df["driver_season_points"] = (
+        df.groupby(["year", "driver_code"])["points"]
+        .transform(lambda s: s.shift(1).cumsum())
+    )
+
+    # --- Equipe ---
+    # A equipe tem 2 carros por corrida; primeiro somamos os pontos dos dois
+    # em cada corrida -> 1 valor por (ano, rodada, equipe).
+    pontos_corrida = (
+        df.groupby(["year", "round", "constructor"])["points"]
+        .sum()
+        .reset_index()
+        .rename(columns={"points": "constructor_race_points"})
+    )
+
+    # Ordena no tempo p/ o acumulado fazer sentido rodada a rodada
+    pontos_corrida = pontos_corrida.sort_values(["year", "round"])
+
+    # Mesmo acumulado, agora por equipe e reiniciando a cada temporada
+    pontos_corrida["constructor_season_points"] = (
+        pontos_corrida.groupby(["year", "constructor"])["constructor_race_points"]
+        .transform(lambda s: s.shift(1).cumsum())
+    )
+
+    # Traz a feature de volta p/ a tabela principal casando por (ano, rodada, equipe)
+    df = df.merge(
+        pontos_corrida[["year", "round", "constructor", "constructor_season_points"]],
+        on=["year", "round", "constructor"],
+        how="left",
+    )
+
+    return df
+
+
 def construir_features(anos) -> pd.DataFrame:
     """
     Pipeline completo de features: carrega, cria target e todas as features.
@@ -169,13 +225,14 @@ def construir_features(anos) -> pd.DataFrame:
     df = adicionar_forma_piloto(df)       # forma recente do piloto
     df = adicionar_forma_equipe(df)       # forma recente da equipe
     df = adicionar_historico_circuito(df) # histórico no circuito
+    df = adicionar_standings_temporada(df) # pontos acumulados no campeonato (piloto+equipe)
     return df
 
 
 # Teste rápido do módulo: python src/features.py
 if __name__ == "__main__":
-    # Constrói as features para as 4 temporadas que estão no disco
-    df = construir_features([2021, 2022, 2023, 2024])
+    # Constrói as features para TODAS as temporadas que estão no disco
+    df = construir_features(listar_temporadas())
 
     # As colunas de feature que acabamos de criar (+ contexto p/ leitura)
     colunas_feature = [
@@ -183,6 +240,8 @@ if __name__ == "__main__":
         "driver_form_points",
         "constructor_form",
         "circuit_best_pos",
+        "driver_season_points",
+        "constructor_season_points",
         "grid",
     ]
 
