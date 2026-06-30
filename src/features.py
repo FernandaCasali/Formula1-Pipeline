@@ -210,9 +210,35 @@ def adicionar_standings_temporada(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def construir_features_df(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Aplica todo o pipeline de features sobre um DataFrame JÁ MONTADO.
+
+    Separamos esta etapa de 'de onde vêm os dados' de propósito: o treino
+    carrega tudo do disco, mas a previsão de uma corrida-alvo precisa INJETAR
+    o grid do quali (uma corrida que ainda não tem resultado salvo). Os dois
+    casos compartilham exatamente a mesma engenharia de features chamando aqui.
+
+    Pré-requisito: df já deve vir ordenado no tempo (year, round) — todo o
+    cálculo anti-leakage depende dessa ordem.
+
+    Args:
+        df: resultados crus (histórico + opcionalmente a corrida-alvo).
+
+    Returns:
+        DataFrame com target + features.
+    """
+    df = adicionar_target(df)             # cria a coluna 'podium' (alvo)
+    df = adicionar_forma_piloto(df)       # forma recente do piloto
+    df = adicionar_forma_equipe(df)       # forma recente da equipe
+    df = adicionar_historico_circuito(df) # histórico no circuito
+    df = adicionar_standings_temporada(df) # pontos acumulados no campeonato (piloto+equipe)
+    return df
+
+
 def construir_features(anos) -> pd.DataFrame:
     """
-    Pipeline completo de features: carrega, cria target e todas as features.
+    Pipeline completo de features a partir das temporadas salvas no disco.
 
     Args:
         anos: iterável de anos a incluir (ex: [2021, 2022, 2023, 2024]).
@@ -221,12 +247,7 @@ def construir_features(anos) -> pd.DataFrame:
         DataFrame pronto para o modelo, com target + features.
     """
     df = carregar_temporadas(anos)        # junta as temporadas no tempo
-    df = adicionar_target(df)             # cria a coluna 'podium' (alvo)
-    df = adicionar_forma_piloto(df)       # forma recente do piloto
-    df = adicionar_forma_equipe(df)       # forma recente da equipe
-    df = adicionar_historico_circuito(df) # histórico no circuito
-    df = adicionar_standings_temporada(df) # pontos acumulados no campeonato (piloto+equipe)
-    return df
+    return construir_features_df(df)      # aplica a mesma engenharia de features
 
 
 # Teste rápido do módulo: python src/features.py

@@ -74,6 +74,70 @@ def get_race_results(year: int, round_number: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def get_qualifying_grid(year: int, round_number: int) -> pd.DataFrame:
+    """
+    Busca o GRID DE LARGADA de uma corrida a partir do qualifying.
+
+    Por que existe esta função (e não dá p/ usar get_race_results):
+        get_race_results só funciona DEPOIS da corrida — o campo 'grid' vem
+        junto dos resultados finais. Para prever uma corrida que ainda NÃO
+        rodou, a gente só tem a informação que existe na véspera: a ordem do
+        grid, definida no quali de sábado. Este é justamente o insumo que o
+        modelo precisa (a feature 'grid') p/ ranquear o pódio antes da largada.
+
+    Detalhe honesto: usamos a posição do QUALI como grid. O grid oficial pode
+    mudar por punições (perda de posições, troca de motor). Mas no sábado, logo
+    após o quali, essa é a melhor informação disponível e sem leakage — nada
+    aqui enxerga o resultado da corrida.
+
+    Args:
+        year: ano da temporada (ex: 2026).
+        round_number: número da rodada-alvo no calendário (ex: 8).
+
+    Returns:
+        DataFrame com uma linha por piloto, na ordem de largada. Traz as mesmas
+        colunas de identificação de get_race_results (year, round, race_name,
+        circuit, driver_code, driver_name, constructor, grid) — mas SEM
+        position/points/status, porque a corrida ainda não aconteceu.
+    """
+    # Endpoint de qualifying. Ex: .../f1/2026/8/qualifying.json
+    url = f"{BASE_URL}/{year}/{round_number}/qualifying.json"
+
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    races = data["MRData"]["RaceTable"]["Races"]
+
+    # Lista vazia = o quali ainda não aconteceu (ou ano/rodada inválidos).
+    # Falha explícita: melhor avisar "o quali ainda não saiu" do que devolver
+    # um DataFrame vazio que quebraria silenciosamente lá na frente.
+    if not races:
+        raise ValueError(
+            f"Nenhum qualifying encontrado para {year}, rodada {round_number}. "
+            "O quali já aconteceu? (sai no sábado da corrida-alvo)"
+        )
+
+    race = races[0]
+    quali = race["QualifyingResults"]  # lista de pilotos na ordem do quali
+
+    rows = []
+    for q in quali:
+        rows.append({
+            "year": year,
+            "round": round_number,
+            "race_name": race["raceName"],
+            "circuit": race["Circuit"]["circuitName"],
+            "driver_code": q["Driver"].get("code", q["Driver"]["driverId"]),
+            "driver_name": f"{q['Driver']['givenName']} {q['Driver']['familyName']}",
+            "constructor": q["Constructor"]["name"],
+            # posição no quali = posição de largada (nosso 'grid' p/ a previsão)
+            "grid": int(q["position"]),
+        })
+
+    return pd.DataFrame(rows)
+
+
 def get_season_rounds(year: int) -> int:
     """
     Descobre quantas rodadas uma temporada teve, perguntando à API.
@@ -152,10 +216,16 @@ def get_season_results(year: int) -> pd.DataFrame:
 # Esse bloco só roda quando você executa "python src/collect.py" diretamente.
 # Serve como um teste rápido do módulo.
 if __name__ == "__main__":
-    # Vamos coletar a temporada de 2024 inteira como teste
+    # 1) Resultados de uma temporada já disputada (vira histórico p/ o modelo)
     season = get_season_results(2024)
 
     print(f"\nTotal: {len(season)} linhas (piloto-corrida) coletadas.\n")
     # Resumo rápido: quantas corridas e pilotos distintos vieram
     print(f"Corridas distintas: {season['round'].nunique()}")
     print(f"Pilotos distintos:  {season['driver_code'].nunique()}")
+
+    # 2) Grid de largada da corrida-alvo (insumo p/ prever ANTES da corrida).
+    #    Usamos uma corrida cujo quali já saiu só p/ exercitar a função.
+    print("\nGrid de largada (a partir do quali) — exemplo:")
+    grid = get_qualifying_grid(2024, 1)
+    print(grid[["grid", "driver_code", "constructor"]].head(5).to_string(index=False))
