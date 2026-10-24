@@ -1,0 +1,16 @@
+# Configuração do pytest para o projeto.
+[tool.pytest.ini_options]
+
+# ESTA é a linha-chave. Seus módulos em src/ se importam entre si por nome
+# puro (ex.: "from store import load_season"). Isso só funciona se src/
+# estiver no sys.path. Aqui dizemos ao pytest para adicionar src/ ao path
+# automaticamente — sem isso, "import features" quebraria nos testes.
+pythonpath = ["src"]
+
+# Onde o pytest procura os testes. Mantém a coleta rápida e previsível.
+testpaths = ["tests"]
+
+# Padrões de nomes que o pytest reconhece como teste (é o padrão, mas
+# deixamos explícito para quem for ler entender a convenção).
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
