@@ -12,7 +12,7 @@ feature pode enxergar o resultado da corrida que estamos tentando prever.
 
 import pandas as pd
 
-from store import load_season, listar_temporadas  # lê temporadas salvas em data/raw/
+from store import listar_temporadas, load_season  # lê temporadas salvas em data/raw/
 
 # Quantas corridas anteriores entram no cálculo de "forma recente" do piloto.
 # 3 é um meio-termo: curto o bastante p/ refletir o momento atual, longo o
@@ -115,10 +115,9 @@ def adicionar_forma_equipe(df: pd.DataFrame) -> pd.DataFrame:
 
     # Média móvel dos pontos da equipe nas últimas JANELA_FORMA corridas.
     # De novo shift(1) p/ não incluir a corrida atual (evita leakage).
-    pontos_corrida["constructor_form"] = (
-        pontos_corrida.groupby("constructor")["constructor_race_points"]
-        .transform(lambda s: s.shift(1).rolling(JANELA_FORMA, min_periods=1).mean())
-    )
+    pontos_corrida["constructor_form"] = pontos_corrida.groupby("constructor")[
+        "constructor_race_points"
+    ].transform(lambda s: s.shift(1).rolling(JANELA_FORMA, min_periods=1).mean())
 
     # Traz a feature de volta p/ a tabela principal casando por (ano, rodada, equipe).
     # how="left" mantém todas as linhas originais de piloto-corrida.
@@ -147,9 +146,7 @@ def adicionar_historico_circuito(df: pd.DataFrame) -> pd.DataFrame:
 
     # expanding().min() -> melhor (menor) posição acumulada até ali.
     # shift(1) -> só corridas ANTERIORES naquele circuito (não a atual).
-    df["circuit_best_pos"] = grupo["position"].transform(
-        lambda s: s.shift(1).expanding().min()
-    )
+    df["circuit_best_pos"] = grupo["position"].transform(lambda s: s.shift(1).expanding().min())
 
     return df
 
@@ -176,9 +173,8 @@ def adicionar_standings_temporada(df: pd.DataFrame) -> pd.DataFrame:
     # Soma corrida a corrida os pontos do piloto DENTRO da temporada.
     # shift(1) -> exclui a corrida atual (não conhecemos o resultado dela ainda);
     # cumsum() pula o NaN inicial e segue acumulando -> pontos até a véspera.
-    df["driver_season_points"] = (
-        df.groupby(["year", "driver_code"])["points"]
-        .transform(lambda s: s.shift(1).cumsum())
+    df["driver_season_points"] = df.groupby(["year", "driver_code"])["points"].transform(
+        lambda s: s.shift(1).cumsum()
     )
 
     # --- Equipe ---
@@ -195,10 +191,9 @@ def adicionar_standings_temporada(df: pd.DataFrame) -> pd.DataFrame:
     pontos_corrida = pontos_corrida.sort_values(["year", "round"])
 
     # Mesmo acumulado, agora por equipe e reiniciando a cada temporada
-    pontos_corrida["constructor_season_points"] = (
-        pontos_corrida.groupby(["year", "constructor"])["constructor_race_points"]
-        .transform(lambda s: s.shift(1).cumsum())
-    )
+    pontos_corrida["constructor_season_points"] = pontos_corrida.groupby(["year", "constructor"])[
+        "constructor_race_points"
+    ].transform(lambda s: s.shift(1).cumsum())
 
     # Traz a feature de volta p/ a tabela principal casando por (ano, rodada, equipe)
     df = df.merge(
@@ -228,11 +223,11 @@ def construir_features_df(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame com target + features.
     """
-    df = adicionar_target(df)             # cria a coluna 'podium' (alvo)
-    df = adicionar_forma_piloto(df)       # forma recente do piloto
-    df = adicionar_forma_equipe(df)       # forma recente da equipe
-    df = adicionar_historico_circuito(df) # histórico no circuito
-    df = adicionar_standings_temporada(df) # pontos acumulados no campeonato (piloto+equipe)
+    df = adicionar_target(df)  # cria a coluna 'podium' (alvo)
+    df = adicionar_forma_piloto(df)  # forma recente do piloto
+    df = adicionar_forma_equipe(df)  # forma recente da equipe
+    df = adicionar_historico_circuito(df)  # histórico no circuito
+    df = adicionar_standings_temporada(df)  # pontos acumulados no campeonato (piloto+equipe)
     return df
 
 
@@ -246,8 +241,8 @@ def construir_features(anos) -> pd.DataFrame:
     Returns:
         DataFrame pronto para o modelo, com target + features.
     """
-    df = carregar_temporadas(anos)        # junta as temporadas no tempo
-    return construir_features_df(df)      # aplica a mesma engenharia de features
+    df = carregar_temporadas(anos)  # junta as temporadas no tempo
+    return construir_features_df(df)  # aplica a mesma engenharia de features
 
 
 # Teste rápido do módulo: python src/features.py

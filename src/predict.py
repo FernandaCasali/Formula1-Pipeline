@@ -15,9 +15,9 @@ import joblib
 import pandas as pd
 
 from collect import get_qualifying_grid, get_race_results  # grid do quali e resultado real
-from features import construir_features, construir_features_df, carregar_temporadas
-from store import listar_temporadas      # temporadas disponíveis no disco
-from train import COLUNAS_FEATURE        # reusa a MESMA lista de features do treino
+from features import carregar_temporadas, construir_features, construir_features_df
+from store import listar_temporadas  # temporadas disponíveis no disco
+from train import COLUNAS_FEATURE  # reusa a MESMA lista de features do treino
 
 # Caminho do modelo treinado salvo pelo train.py.
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
@@ -131,9 +131,7 @@ def prever_pelo_grid(year: int, round_number: int, anos_contexto=None) -> pd.Dat
 
     # Anti-leakage: descarta a própria corrida-alvo se ela já estiver salva.
     # Queremos prever como se fosse sábado — sem o resultado do domingo.
-    historico = historico[
-        ~((historico["year"] == year) & (historico["round"] == round_number))
-    ]
+    historico = historico[~((historico["year"] == year) & (historico["round"] == round_number))]
 
     # Grid de largada da corrida-alvo (posição do quali). É o único dado "novo".
     grid = get_qualifying_grid(year, round_number)
@@ -208,24 +206,30 @@ if __name__ == "__main__":
     nome_corrida = previsao["race_name"].iloc[0]
     print(f"\nPrevisão de pódio (só com o grid) — {nome_corrida} ({ANO}, rodada {RODADA})\n")
     print(
-        previsao[[
-            "driver_code",     # piloto
-            "grid",            # largada (vinda do quali)
-            "prob_podium",     # probabilidade prevista de pódio
-            "pódio_previsto",  # entrou no top 3 previsto?
-        ]].head(8).to_string(index=False, float_format=lambda x: f"{x:.3f}")
+        previsao[
+            [
+                "driver_code",  # piloto
+                "grid",  # largada (vinda do quali)
+                "prob_podium",  # probabilidade prevista de pódio
+                "pódio_previsto",  # entrou no top 3 previsto?
+            ]
+        ]
+        .head(8)
+        .to_string(index=False, float_format=lambda x: f"{x:.3f}")
     )
 
     # 2) Conferência: agora que a corrida rodou, quantos dos 3 previstos subiram?
     conferencia = conferir_previsao(ANO, RODADA, previsao)
     print("\nConferência contra o resultado real:")
     print(
-        conferencia[[
-            "driver_code",     # piloto previsto no pódio
-            "grid",            # de onde largou
-            "posicao_real",    # onde terminou de verdade
-            "subiu_no_podio",  # bateu o pódio? (posição real <= 3)
-        ]].to_string(index=False, float_format=lambda x: f"{x:.0f}")
+        conferencia[
+            [
+                "driver_code",  # piloto previsto no pódio
+                "grid",  # de onde largou
+                "posicao_real",  # onde terminou de verdade
+                "subiu_no_podio",  # bateu o pódio? (posição real <= 3)
+            ]
+        ].to_string(index=False, float_format=lambda x: f"{x:.0f}")
     )
     acertos = int(conferencia["subiu_no_podio"].sum())
     print(f"\nAcertos no pódio previsto: {acertos}/3")

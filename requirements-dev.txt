@@ -1,0 +1,5 @@
+# Dependências APENAS de desenvolvimento/teste.
+# Ficam separadas do requirements.txt (produção) de propósito:
+# o CI e o dev instalam os dois; o deploy do app instala só o de produção.
+pytest==8.3.4
+ruff==0.14.4

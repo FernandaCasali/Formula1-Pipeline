@@ -14,10 +14,10 @@ Rodar com:  streamlit run src/app.py
 
 import streamlit as st
 
-from features import construir_features        # p/ montar o catálogo de corridas
-from predict import prever_corrida, carregar_modelo  # motor de previsão + modelo salvo
-from store import listar_temporadas            # temporadas disponíveis no disco
-from train import COLUNAS_FEATURE              # mesma lista de features do treino
+from features import construir_features  # p/ montar o catálogo de corridas
+from predict import carregar_modelo, prever_corrida  # motor de previsão + modelo salvo
+from store import listar_temporadas  # temporadas disponíveis no disco
+from train import COLUNAS_FEATURE  # mesma lista de features do treino
 
 # Anos disponíveis no dataset — o mesmo contexto usado no treino/previsão.
 # Descobertos do disco p/ não chumbar a lista (entra ano novo sozinho).
@@ -26,10 +26,10 @@ ANOS = listar_temporadas()
 # ---------------------------------------------------------------------------
 # Paleta F1 (constantes de tema, não dados)
 # ---------------------------------------------------------------------------
-VERMELHO = "#E10600"   # vermelho corrida (acento primário)
-LIMAO = "#C6FF00"      # verde-limão (acerto / sucesso)
-FUNDO = "#0A0A0B"      # preto carbono
-GRAFITE = "#121214"    # superfície dos cards
+VERMELHO = "#E10600"  # vermelho corrida (acento primário)
+LIMAO = "#C6FF00"  # verde-limão (acerto / sucesso)
+FUNDO = "#0A0A0B"  # preto carbono
+GRAFITE = "#121214"  # superfície dos cards
 
 # Cores oficiais aproximadas das equipes, casadas por trecho do nome.
 # Mantém a identidade visual das escuderias nas barras e cards.
@@ -102,9 +102,7 @@ def importancia_features():
     try:
         modelo = carregar_modelo()
         imp = modelo.named_steps["xgb"].feature_importances_
-        pares = sorted(
-            zip(COLUNAS_FEATURE, imp), key=lambda x: x[1], reverse=True
-        )
+        pares = sorted(zip(COLUNAS_FEATURE, imp), key=lambda x: x[1], reverse=True)
         return [(rotulos.get(c, c), float(v)) for c, v in pares]
     except Exception:
         return []
@@ -161,47 +159,55 @@ def html_podio(top3) -> str:
     p2 = linhas[1][1]
     p3 = linhas[2][1]
 
-    def degrau(piloto, medalha, posicao, altura, fonte_nome, cor_num, brilho,
-               cor_pct, num_fonte):
+    def degrau(piloto, medalha, posicao, altura, fonte_nome, cor_num, brilho, cor_pct, num_fonte):
         cor = cor_equipe(piloto["constructor"])
         pct = f"{piloto['prob_podium'] * 100:.0f}%"
         return f"""
         <div>
           <div style="text-align:center; margin-bottom:14px;">
             <div style="display:inline-flex; align-items:center; gap:6px; padding:5px 12px;
-                border-radius:20px; background:{brilho['chip_bg']};
-                border:1px solid {brilho['chip_bd']}; font-family:'JetBrains Mono',monospace;
-                font-size:12px; color:{brilho['chip_fg']}; font-weight:700;">
+                border-radius:20px; background:{brilho["chip_bg"]};
+                border:1px solid {brilho["chip_bd"]}; font-family:'JetBrains Mono',monospace;
+                font-size:12px; color:{brilho["chip_fg"]}; font-weight:700;">
                 {medalha} {posicao} · {pct}</div>
             <div class="f1-oswald" style="font-weight:700; font-size:{fonte_nome}px;
-                margin-top:10px; text-transform:uppercase;">{nome_curto(piloto['driver_name'])}</div>
+                margin-top:10px; text-transform:uppercase;">{nome_curto(piloto["driver_name"])}</div>
             <div style="display:flex; align-items:center; justify-content:center; gap:7px; margin-top:4px;">
               <span style="width:9px;height:9px;border-radius:50%;background:{cor};"></span>
-              <span style="font-size:12px; color:#8A8A92;">{piloto['constructor']}</span>
+              <span style="font-size:12px; color:#8A8A92;">{piloto["constructor"]}</span>
             </div>
-            <div class="f1-mono" style="font-size:11px; color:#6c6c74; margin-top:6px;">Largada P{int(piloto['grid'])}</div>
+            <div class="f1-mono" style="font-size:11px; color:#6c6c74; margin-top:6px;">Largada P{int(piloto["grid"])}</div>
           </div>
-          <div style="height:{altura}px; border-radius:10px 10px 0 0; background:{brilho['step_bg']};
-              border:1px solid {brilho['step_bd']}; border-bottom:none; display:flex;
+          <div style="height:{altura}px; border-radius:10px 10px 0 0; background:{brilho["step_bg"]};
+              border:1px solid {brilho["step_bd"]}; border-bottom:none; display:flex;
               align-items:flex-start; justify-content:center; padding-top:16px;
-              box-shadow:{brilho['step_sh']};">
+              box-shadow:{brilho["step_sh"]};">
             <span class="f1-oswald" style="font-weight:700; font-size:{num_fonte}px; color:{cor_num};">{posicao[1:]}</span>
           </div>
         </div>"""
 
     estilo_p1 = {
-        "chip_bg": "rgba(225,6,0,.14)", "chip_bd": "rgba(225,6,0,.5)", "chip_fg": "#ff5b54",
-        "step_bg": "linear-gradient(180deg,#2a1413,#180d0d)", "step_bd": "rgba(225,6,0,.4)",
+        "chip_bg": "rgba(225,6,0,.14)",
+        "chip_bd": "rgba(225,6,0,.5)",
+        "chip_fg": "#ff5b54",
+        "step_bg": "linear-gradient(180deg,#2a1413,#180d0d)",
+        "step_bd": "rgba(225,6,0,.4)",
         "step_sh": "inset 0 3px 0 #E10600, 0 0 50px rgba(225,6,0,.22)",
     }
     estilo_prata = {
-        "chip_bg": "#1c1c20", "chip_bd": "#2c2c33", "chip_fg": "#C0C0C8",
-        "step_bg": "linear-gradient(180deg,#1f1f24,#17171b)", "step_bd": "#2c2c33",
+        "chip_bg": "#1c1c20",
+        "chip_bd": "#2c2c33",
+        "chip_fg": "#C0C0C8",
+        "step_bg": "linear-gradient(180deg,#1f1f24,#17171b)",
+        "step_bd": "#2c2c33",
         "step_sh": "inset 0 3px 0 #C0C0C8",
     }
     estilo_bronze = {
-        "chip_bg": "#1c1c20", "chip_bd": "#2c2c33", "chip_fg": "#cd8b5a",
-        "step_bg": "linear-gradient(180deg,#1f1f24,#17171b)", "step_bd": "#2c2c33",
+        "chip_bg": "#1c1c20",
+        "chip_bd": "#2c2c33",
+        "chip_fg": "#cd8b5a",
+        "step_bg": "linear-gradient(180deg,#1f1f24,#17171b)",
+        "step_bd": "#2c2c33",
         "step_sh": "inset 0 3px 0 #cd8b5a",
     }
 
@@ -230,13 +236,13 @@ def html_grid_prob(resultado) -> str:
         subiu = int(d["podium"]) == 1
         cor = cor_equipe(d["constructor"])
         pct_val = d["prob_podium"] * 100
-        rank = f"P{i+1}" if previsto else str(i + 1)
+        rank = f"P{i + 1}" if previsto else str(i + 1)
         rank_cor = VERMELHO if previsto else "#6c6c74"
         row_bg = "rgba(225,6,0,0.06)" if previsto else "#16161A"
         row_bd = "rgba(225,6,0,0.28)" if previsto else "#1f1f24"
         pct_cor = "#fff" if previsto else "#8A8A92"
         resultado_icone = "✅" if subiu else "·"
-        barra_bg = (f"linear-gradient(90deg,{cor},{VERMELHO})" if previsto else cor)
+        barra_bg = f"linear-gradient(90deg,{cor},{VERMELHO})" if previsto else cor
         barra_op = "1" if previsto else "0.5"
         linhas += f"""
         <div style="display:grid; grid-template-columns:30px 150px 1fr 58px 40px; align-items:center;
@@ -244,8 +250,8 @@ def html_grid_prob(resultado) -> str:
           <span class="f1-oswald" style="font-weight:700; font-size:16px; color:{rank_cor}; text-align:center;">{rank}</span>
           <div style="display:flex; align-items:center; gap:9px; min-width:0;">
             <span style="width:8px;height:8px;border-radius:50%;flex:none;background:{cor};"></span>
-            <span class="f1-mono" style="font-weight:700; font-size:13px;">{d['driver_code']}</span>
-            <span style="font-size:12px; color:#8A8A92; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{d['driver_name'].split()[-1]}</span>
+            <span class="f1-mono" style="font-weight:700; font-size:13px;">{d["driver_code"]}</span>
+            <span style="font-size:12px; color:#8A8A92; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{d["driver_name"].split()[-1]}</span>
           </div>
           <div style="height:10px; border-radius:6px; background:#1c1c20; overflow:hidden;">
             <div style="height:100%; width:{pct_val:.0f}%; border-radius:6px; background:{barra_bg}; opacity:{barra_op};"></div>
@@ -275,7 +281,7 @@ def html_importancia(features, acertos, nomes_previstos) -> str:
             <div>
               <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px;">
                 <span style="font-size:13px; font-weight:600;">{label}</span>
-                <span class="f1-mono" style="font-size:12px; color:{LIMAO}; font-weight:700;">{v*100:.0f}%</span>
+                <span class="f1-mono" style="font-size:12px; color:{LIMAO}; font-weight:700;">{v * 100:.0f}%</span>
               </div>
               <div style="height:5px; border-radius:5px; background:#1c1c20; overflow:hidden;">
                 <div style="height:100%; width:{largura:.0f}%; border-radius:5px; background:linear-gradient(90deg,#7a9e00,{LIMAO});"></div>
@@ -315,7 +321,9 @@ def html_strip_e_medidores(nome_corrida, ano, rodada, acertos, confianca) -> str
     alturas = ["40%", "65%", "85%", "100%", "100%"]
     for idx, h in enumerate(alturas):
         cor = VERMELHO if idx < niveis else "#2c2c33"
-        barras_conf += f'<span style="width:7px; height:{h}; background:{cor}; border-radius:2px;"></span>'
+        barras_conf += (
+            f'<span style="width:7px; height:{h}; background:{cor}; border-radius:2px;"></span>'
+        )
 
     # Três luzes de acerto (acesas = acertos)
     luzes = ""
@@ -366,7 +374,7 @@ def _limpar_html(markup: str) -> str:
     Tiramos o espaço de cada linha e juntamos tudo, sem indentação p/ confundir.
     """
     linhas = [linha.strip() for linha in markup.splitlines()]  # tira a indentação
-    return " ".join(linha for linha in linhas if linha)        # descarta linhas vazias
+    return " ".join(linha for linha in linhas if linha)  # descarta linhas vazias
 
 
 def render(markup: str) -> None:
@@ -413,9 +421,9 @@ with h_gp:
     rodada = st.selectbox(
         "Grande Prêmio",
         options=corridas_do_ano["round"].tolist(),
-        format_func=lambda r: corridas_do_ano.loc[
-            corridas_do_ano["round"] == r, "race_name"
-        ].iloc[0],
+        format_func=lambda r: corridas_do_ano.loc[corridas_do_ano["round"] == r, "race_name"].iloc[
+            0
+        ],
     )
 
 # --- Previsão (cacheada) ---
@@ -448,5 +456,5 @@ render(html_grid_prob(resultado))
 render(
     '<div style="text-align:center; margin-top:26px;" class="f1-mono">'
     '<span style="font-size:10px; color:#4a4a52; letter-spacing:.5px;">'
-    'F1 PODIUM PREDICTOR · CAMADA DE APRESENTAÇÃO</span></div>'
+    "F1 PODIUM PREDICTOR · CAMADA DE APRESENTAÇÃO</span></div>"
 )
