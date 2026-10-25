@@ -9,9 +9,8 @@ on:
                           # você trabalha numa branch, abre PR pra main, o CI roda)
 
 jobs:
-  # Um único job chamado "qa". Um job = uma máquina limpa na nuvem.
   qa:
-    # Roda em Linux (mais rápido e barato que Windows; o código é portável).
+    name: QA              # ← rótulo exibido no GitHub (o resto continua igual)
     runs-on: ubuntu-latest
 
     steps:
