@@ -65,8 +65,7 @@ def listar_temporadas() -> list[int]:
     # Falha explícita: sem nenhuma temporada no disco não há o que processar.
     if not anos:
         raise FileNotFoundError(
-            f"Nenhuma temporada em {RAW_DIR}. Rode a coleta primeiro: "
-            "python src/collect_seasons.py"
+            f"Nenhuma temporada em {RAW_DIR}. Rode a coleta primeiro: python src/collect_seasons.py"
         )
 
     # Ordena crescente — a ordem cronológica importa p/ a validação temporal.

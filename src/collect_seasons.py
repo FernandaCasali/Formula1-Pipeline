@@ -7,7 +7,7 @@ Não tem lógica de dados própria — é só o "maestro" que junta as peças.
 """
 
 from collect import get_season_results  # busca uma temporada inteira na API
-from store import save_season           # grava o DataFrame em data/raw/
+from store import save_season  # grava o DataFrame em data/raw/
 
 # Anos que queremos no dataset. range(2021, 2025) gera 2021, 2022, 2023, 2024
 # (o limite de cima é exclusivo). 4 temporadas dão base p/ validação temporal:
@@ -24,9 +24,9 @@ def coletar_temporadas(anos) -> None:
     """
     # Percorre ano a ano — cada iteração é uma temporada independente
     for ano in anos:
-        print(f"\n{'='*50}")           # separador visual entre temporadas
+        print(f"\n{'=' * 50}")  # separador visual entre temporadas
         print(f"Coletando temporada {ano}...")
-        print('='*50)
+        print("=" * 50)
 
         # Busca todas as corridas do ano (já respeita o rate limit lá dentro)
         df = get_season_results(ano)

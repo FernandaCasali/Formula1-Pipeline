@@ -15,7 +15,6 @@ Duas avaliações:
 from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import classification_report
@@ -24,17 +23,17 @@ from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
 from features import construir_features  # monta target + features sem leakage
-from store import listar_temporadas      # descobre as temporadas salvas no disco
+from store import listar_temporadas  # descobre as temporadas salvas no disco
 
 # As colunas que o modelo usa como entrada. NÃO inclui 'position'/'points'/
 # 'status' da corrida atual — isso é resultado, viraria leakage.
 COLUNAS_FEATURE = [
-    "grid",                # posição de largada (vem do quali, conhecida antes)
-    "driver_form_pos",     # média de posição do piloto nas últimas corridas
+    "grid",  # posição de largada (vem do quali, conhecida antes)
+    "driver_form_pos",  # média de posição do piloto nas últimas corridas
     "driver_form_points",  # média de pontos do piloto nas últimas corridas
-    "constructor_form",    # média de pontos da equipe nas últimas corridas
-    "circuit_best_pos",    # melhor posição do piloto naquele circuito no passado
-    "driver_season_points",       # pontos do piloto no campeonato até a corrida
+    "constructor_form",  # média de pontos da equipe nas últimas corridas
+    "circuit_best_pos",  # melhor posição do piloto naquele circuito no passado
+    "driver_season_points",  # pontos do piloto no campeonato até a corrida
     "constructor_season_points",  # pontos da equipe no campeonato até a corrida
 ]
 
@@ -58,24 +57,28 @@ def montar_modelo(scale_pos_weight: float) -> Pipeline:
     Returns:
         Pipeline pronto para .fit().
     """
-    modelo = Pipeline(steps=[
-        # Passo 1: preenche os NaN (estreias sem histórico) com a média da coluna.
-        ("imputer", SimpleImputer(strategy="mean")),
-
-        # Passo 2: o classificador. Os hiperparâmetros abaixo são CONFIGURAÇÃO
-        # do treino (não pesos do modelo). Os PESOS de fato — quanto cada
-        # feature importa — o XGBoost aprende sozinho no .fit().
-        ("xgb", XGBClassifier(
-            n_estimators=200,            # nº de árvores
-            max_depth=4,                 # profundidade — raso evita overfit
-            learning_rate=0.05,          # passo do aprendizado
-            subsample=0.9,               # amostra de linhas por árvore
-            colsample_bytree=0.9,        # amostra de colunas por árvore
-            scale_pos_weight=scale_pos_weight,  # compensa pódio ser raro (~15%)
-            eval_metric="logloss",       # métrica interna de otimização
-            random_state=42,             # reprodutibilidade
-        )),
-    ])
+    modelo = Pipeline(
+        steps=[
+            # Passo 1: preenche os NaN (estreias sem histórico) com a média da coluna.
+            ("imputer", SimpleImputer(strategy="mean")),
+            # Passo 2: o classificador. Os hiperparâmetros abaixo são CONFIGURAÇÃO
+            # do treino (não pesos do modelo). Os PESOS de fato — quanto cada
+            # feature importa — o XGBoost aprende sozinho no .fit().
+            (
+                "xgb",
+                XGBClassifier(
+                    n_estimators=200,  # nº de árvores
+                    max_depth=4,  # profundidade — raso evita overfit
+                    learning_rate=0.05,  # passo do aprendizado
+                    subsample=0.9,  # amostra de linhas por árvore
+                    colsample_bytree=0.9,  # amostra de colunas por árvore
+                    scale_pos_weight=scale_pos_weight,  # compensa pódio ser raro (~15%)
+                    eval_metric="logloss",  # métrica interna de otimização
+                    random_state=42,  # reprodutibilidade
+                ),
+            ),
+        ]
+    )
     return modelo
 
 
@@ -134,9 +137,7 @@ def avaliar_temporal(df: pd.DataFrame) -> None:
         y_prev = modelo.predict(X_teste)
 
         # report como dict p/ extrair só os números da classe pódio ("1")
-        report = classification_report(
-            y_teste, y_prev, output_dict=True, zero_division=0
-        )
+        report = classification_report(y_teste, y_prev, output_dict=True, zero_division=0)
         podio = report["1"]  # métricas da classe positiva (pódio)
 
         print(
@@ -182,9 +183,9 @@ def avaliar_acertos_podio(modelo: Pipeline, teste: pd.DataFrame) -> None:
         acertos = int(top3["podium"].sum())
         acertos_por_corrida.append(acertos)
 
-    n_corridas = len(acertos_por_corrida)          # total de corridas avaliadas
-    total_acertos = sum(acertos_por_corrida)       # acertos somados na temporada
-    media = total_acertos / n_corridas             # acertos médios por corrida (0..3)
+    n_corridas = len(acertos_por_corrida)  # total de corridas avaliadas
+    total_acertos = sum(acertos_por_corrida)  # acertos somados na temporada
+    media = total_acertos / n_corridas  # acertos médios por corrida (0..3)
 
     # Acerto percentual: do total de 3 vagas por corrida, quantas pegamos.
     pct = total_acertos / (3 * n_corridas)
@@ -216,8 +217,8 @@ def treinar_final(df: pd.DataFrame) -> Pipeline:
 
     # Máscara temporal: treino = todos os anos anteriores, teste = o ano atual.
     # Split por ANO (não aleatório) — é o coração da validação temporal.
-    treino = df[df["year"] < ano_teste]   # todas as temporadas anteriores
-    teste = df[df["year"] == ano_teste]   # a "temporada atual" deste dataset
+    treino = df[df["year"] < ano_teste]  # todas as temporadas anteriores
+    teste = df[df["year"] == ano_teste]  # a "temporada atual" deste dataset
 
     # Separa features (X) e alvo (y) de cada conjunto
     X_treino, y_treino = treino[COLUNAS_FEATURE], treino[COLUNA_ALVO]

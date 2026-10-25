@@ -8,8 +8,8 @@ Objetivo deste primeiro passo:
 
 import time
 
-import requests
 import pandas as pd
+import requests
 
 # URL base do mirror da Ergast (a API original foi descontinuada em 2024)
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
@@ -56,19 +56,21 @@ def get_race_results(year: int, round_number: int) -> pd.DataFrame:
     # Extraímos só os campos que interessam de cada piloto
     rows = []
     for r in results:
-        rows.append({
-            "year": year,
-            "round": round_number,
-            "race_name": race["raceName"],
-            "circuit": race["Circuit"]["circuitName"],
-            "driver_code": r["Driver"].get("code", r["Driver"]["driverId"]),
-            "driver_name": f"{r['Driver']['givenName']} {r['Driver']['familyName']}",
-            "constructor": r["Constructor"]["name"],
-            "grid": int(r["grid"]),            # posição de largada
-            "position": int(r["position"]),    # posição final
-            "status": r["status"],             # "Finished", "+1 Lap", "Accident"...
-            "points": float(r["points"]),
-        })
+        rows.append(
+            {
+                "year": year,
+                "round": round_number,
+                "race_name": race["raceName"],
+                "circuit": race["Circuit"]["circuitName"],
+                "driver_code": r["Driver"].get("code", r["Driver"]["driverId"]),
+                "driver_name": f"{r['Driver']['givenName']} {r['Driver']['familyName']}",
+                "constructor": r["Constructor"]["name"],
+                "grid": int(r["grid"]),  # posição de largada
+                "position": int(r["position"]),  # posição final
+                "status": r["status"],  # "Finished", "+1 Lap", "Accident"...
+                "points": float(r["points"]),
+            }
+        )
 
     # Transforma a lista de dicionários em um DataFrame
     return pd.DataFrame(rows)
@@ -123,17 +125,19 @@ def get_qualifying_grid(year: int, round_number: int) -> pd.DataFrame:
 
     rows = []
     for q in quali:
-        rows.append({
-            "year": year,
-            "round": round_number,
-            "race_name": race["raceName"],
-            "circuit": race["Circuit"]["circuitName"],
-            "driver_code": q["Driver"].get("code", q["Driver"]["driverId"]),
-            "driver_name": f"{q['Driver']['givenName']} {q['Driver']['familyName']}",
-            "constructor": q["Constructor"]["name"],
-            # posição no quali = posição de largada (nosso 'grid' p/ a previsão)
-            "grid": int(q["position"]),
-        })
+        rows.append(
+            {
+                "year": year,
+                "round": round_number,
+                "race_name": race["raceName"],
+                "circuit": race["Circuit"]["circuitName"],
+                "driver_code": q["Driver"].get("code", q["Driver"]["driverId"]),
+                "driver_name": f"{q['Driver']['givenName']} {q['Driver']['familyName']}",
+                "constructor": q["Constructor"]["name"],
+                # posição no quali = posição de largada (nosso 'grid' p/ a previsão)
+                "grid": int(q["position"]),
+            }
+        )
 
     return pd.DataFrame(rows)
 
@@ -196,8 +200,10 @@ def get_season_results(year: int) -> pd.DataFrame:
         try:
             df = get_race_results(year, round_number)
             season_frames.append(df)
-            print(f"  rodada {round_number:2d}/{total_rounds} — "
-                  f"{df['race_name'].iloc[0]} ({len(df)} pilotos)")
+            print(
+                f"  rodada {round_number:2d}/{total_rounds} — "
+                f"{df['race_name'].iloc[0]} ({len(df)} pilotos)"
+            )
         except (requests.RequestException, ValueError, KeyError) as erro:
             # Logamos e continuamos — não interrompemos a temporada inteira
             print(f"  rodada {round_number:2d}/{total_rounds} — FALHOU: {erro}")

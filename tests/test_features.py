@@ -10,7 +10,7 @@ Dois testes:
 import pandas as pd
 
 # Graças ao pythonpath=["src"] no pyproject.toml, o import por nome funciona.
-from features import adicionar_target, adicionar_forma_piloto
+from features import adicionar_forma_piloto, adicionar_target
 
 
 def test_target_marca_podio_ate_posicao_3():
@@ -28,13 +28,15 @@ def test_target_marca_podio_ate_posicao_3():
 def test_forma_piloto_nao_tem_leakage():
     # Um único piloto, 4 corridas EM ORDEM cronológica, posições conhecidas.
     # Montamos de propósito uma sequência limpa (1,2,3,4) p/ a conta ser óbvia.
-    df = pd.DataFrame({
-        "driver_code": ["VER", "VER", "VER", "VER"],
-        "year":        [2024,  2024,  2024,  2024],
-        "round":       [1,     2,     3,     4],
-        "position":    [1,     2,     3,     4],
-        "points":      [25,    18,    15,    12],
-    })
+    df = pd.DataFrame(
+        {
+            "driver_code": ["VER", "VER", "VER", "VER"],
+            "year": [2024, 2024, 2024, 2024],
+            "round": [1, 2, 3, 4],
+            "position": [1, 2, 3, 4],
+            "points": [25, 18, 15, 12],
+        }
+    )
 
     # Calcula a forma recente do piloto (média móvel das posições anteriores).
     out = adicionar_forma_piloto(df)
